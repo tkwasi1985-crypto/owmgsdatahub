@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Admin — OWMGS Data</title>
+<meta name="theme-color" content="#0f1a2b">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/admin.html"><span class="logo-mark">OW</span>Admin</a>
+    <nav class="nav"><a href="/" target="_blank">View shop</a><a href="#" id="logout" class="hide">Log out</a></nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top:20px;padding-bottom:40px">
+  <!-- Login -->
+  <div id="loginView" class="card narrow">
+    <h2>Admin login</h2>
+    <p class="sub">Use the ADMIN_PASSWORD you set in Cloudflare.</p>
+    <form id="loginForm">
+      <input id="pw" type="password" placeholder="Admin password" autocomplete="current-password">
+      <div class="alert bad mt hide" id="loginErr"></div>
+      <button class="btn go mt" id="loginBtn">Log in</button>
+    </form>
+  </div>
+
+  <div id="app" class="hide">
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-t="overview">Overview</button>
+      <button class="tab" data-t="orders">Orders</button>
+      <button class="tab" data-t="bundles">Bundles &amp; prices</button>
+      <button class="tab" data-t="agents">Agents</button>
+      <button class="tab" data-t="settings">Settings</button>
+    </div>
+
+    <!-- Overview -->
+    <section data-p="overview">
+      <div id="sysWarn"></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Today sales</div><div class="v" id="tSales">—</div><div class="s" id="tOrders"></div></div>
+        <div class="stat"><div class="k">Today profit (est.)</div><div class="v" id="tProfit">—</div></div>
+        <div class="stat"><div class="k">This month sales</div><div class="v" id="mSales">—</div><div class="s" id="mOrders"></div></div>
+        <div class="stat"><div class="k">This month profit (est.)</div><div class="v" id="mProfit">—</div><div class="s" id="mFees"></div></div>
+      </div>
+      <div class="card mt">
+        <h2>Sales, last 14 days</h2>
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="card mt">
+        <h2>Needs attention</h2>
+        <div class="stats mt" id="attn"></div>
+      </div>
+    </section>
+
+    <!-- Orders -->
+    <section data-p="orders" class="hide">
+      <div class="card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="oStatus" style="max-width:190px">
+            <option value="">All statuses</option><option value="pending">Waiting for payment</option><option value="paid">Paid</option>
+            <option value="processing">Sending</option><option value="delivered">Sent</option><option value="failed">Failed</option>
+            <option value="underpaid">Underpaid</option><option value="refunded">Refunded</option><option value="cancelled">Cancelled</option>
+          </select>
+          <input id="oQ" type="text" placeholder="Search ref, phone, agent" style="flex:1;min-width:180px">
+          <button class="btn" id="oGo">Search</button>
+        </div>
+        <div class="tablewrap mt"><table>
+          <thead><tr><th>Date</th><th>Ref</th><th>Bundle</th><th>Number</th><th>Buyer</th><th class="num">Paid</th><th class="num">Cost</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="oRows"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- Bundles -->
+    <section data-p="bundles" class="hide">
+      <div class="card">
+        <h2>Bundles &amp; prices</h2>
+        <p class="sub"><b>Price</b> = what customers pay. <b>Agent</b> = what agents pay. <b>Cost</b> = what your supplier charges you.
+        <b>Supplier code</b> = the plan code your supplier's API needs. Untick <b>On</b> to hide a bundle.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>On</th><th>Network</th><th>Name</th><th>Validity</th><th class="num">Price</th><th class="num">Agent</th><th class="num">Cost</th><th class="num">Profit</th><th>Supplier code</th><th></th></tr></thead>
+          <tbody id="bRows"></tbody>
+        </table></div>
+        <div class="row-actions mt">
+          <button class="btn ghost" id="bAdd">+ Add bundle</button>
+          <button class="btn" id="bSave">Save prices</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Agents -->
+    <section data-p="agents" class="hide">
+      <div class="card">
+        <h2>Agents</h2>
+        <p class="sub">Approve new agents so they can log in and buy at agent prices. They get an SMS when approved.</p>
+        <div class="tablewrap"><table>
+          <thead><tr><th>Joined</th><th>Name</th><th>Phone</th><th>Business</th><th>Location</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="aRows"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- Settings -->
+    <section data-p="settings" class="hide">
+      <div class="grid2">
+        <div class="card">
+          <h2>Shop settings</h2>
+          <form id="cForm" class="mt">
+            <div class="field"><label>Shop name</label><input id="cName" type="text"></div>
+            <div class="field"><label>Tagline</label><input id="cTag" type="text"></div>
+            <div class="field"><label>WhatsApp number</label><input id="cWa" type="tel" placeholder="233249021637"><div class="hint">Start with 233. Leave empty to hide the WhatsApp button.</div></div>
+            <div class="field"><label>Notice banner</label><input id="cNotice" type="text" placeholder="e.g. MTN delivery is slow today"></div>
+            <div class="field"><label class="check"><input type="checkbox" id="cOpen"> Shop is open</label></div>
+            <div class="field"><label>Paystack fee % (for profit estimate)</label><input id="cFee" type="number" step="0.01"></div>
+            <div class="field"><label>SMS when data is sent</label><textarea id="cSmsOk" rows="3"></textarea></div>
+            <div class="field"><label>SMS when sending fails</label><textarea id="cSmsBad" rows="3"></textarea>
+              <div class="hint">You can use {bundle} {network} {phone} {ref} {site}</div></div>
+            <button class="btn mt" id="cSave">Save settings</button>
+          </form>
+        </div>
+        <div class="card">
+          <h2>Test SMS</h2>
+          <p class="sub">Check that your SMS company settings in Cloudflare work.</p>
+          <input id="smsTo" type="tel" placeholder="0241234567">
+          <button class="btn mt" id="smsTest">Send test SMS</button>
+          <h2 class="mt">System</h2>
+          <div id="sysInfo" class="summary mt"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script src="/assets/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const call = (action, data = {}) => OWM.api("/api/admin", { method: "POST", role: "admin", data: { action, ...data } });
+let bundles = [];
+
+function needLogin(r) {
+  if (r && !r.ok && /log in/i.test(r.error || "")) { showLogin(); return true; }
+  return false;
+}
+function showLogin() { $("loginView").classList.remove("hide"); $("app").classList.add("hide"); $("logout").classList.add("hide"); }
+function showApp() { $("loginView").classList.add("hide"); $("app").classList.remove("hide"); $("logout").classList.remove("hide"); openTab("overview"); }
+
+$("loginForm").onsubmit = async (e) => {
+  e.preventDefault(); $("loginErr").classList.add("hide");
+  OWM.busy($("loginBtn"), true, " Checking…");
+  const r = await OWM.api("/api/auth", { method: "POST", data: { action: "admin-login", password: $("pw").value } });
+  OWM.busy($("loginBtn"), false);
+  if (!r.ok) { $("loginErr").textContent = r.error; $("loginErr").classList.remove("hide"); return; }
+  OWM.setToken("admin", r.token); $("pw").value = ""; showApp();
+};
+$("logout").onclick = (e) => { e.preventDefault(); OWM.setToken("admin", ""); showLogin(); };
+
+document.querySelectorAll("#tabs .tab").forEach((t) => t.onclick = () => openTab(t.dataset.t));
+function openTab(name) {
+  document.querySelectorAll("#tabs .tab").forEach((t) => t.classList.toggle("on", t.dataset.t === name));
+  document.querySelectorAll("section[data-p]").forEach((s) => s.classList.toggle("hide", s.dataset.p !== name));
+  ({ overview: loadOverview, orders: loadOrders, bundles: loadBundles, agents: loadAgents, settings: loadSettings })[name]();
+}
+
+// ---------- Overview ----------
+async function loadOverview() {
+  const r = await call("overview");
+  if (needLogin(r) || !r.ok) return;
+  $("tSales").textContent = OWM.cedi(r.today.sales); $("tOrders").textContent = `${r.today.orders} sent orders`;
+  $("tProfit").textContent = OWM.cedi(r.today.profit);
+  $("mSales").textContent = OWM.cedi(r.month.sales); $("mOrders").textContent = `${r.month.orders} sent orders`;
+  $("mProfit").textContent = OWM.cedi(r.month.profit); $("mFees").textContent = `after est. Paystack fees ${OWM.cedi(r.month.fees)}`;
+  const max = Math.max(1, ...r.days.map((d) => d.sales));
+  $("bars").innerHTML = r.days.map((d) => `<div class="b" title="${d.day}: ${OWM.cedi(d.sales)} (${d.orders} orders)">
+    <i style="height:${Math.round((d.sales / max) * 100)}%"></i><span>${d.day.slice(3)}</span></div>`).join("");
+  const a = r.attention;
+  $("attn").innerHTML = [
+    ["Failed orders", a.failed, "failed"], ["Stuck sending", a.processing, "processing"],
+    ["Underpaid", a.underpaid, "underpaid"], ["Agents to approve", a.pendingAgents, "agents"],
+  ].map(([k, v, go]) => `<a class="stat" href="#" data-go="${go}" style="color:inherit"><div class="k">${k}</div><div class="v" style="color:${v ? "var(--danger)" : "inherit"}">${v}</div><div class="s">This month · tap to view</div></a>`).join("");
+  $("attn").querySelectorAll("[data-go]").forEach((el) => el.onclick = (e) => {
+    e.preventDefault();
+    if (el.dataset.go === "agents") return openTab("agents");
+    $("oStatus").value = el.dataset.go; openTab("orders");
+  });
+  const s = r.system, w = [];
+  if (s.demoPayments) w.push("<b>Demo payments are ON.</b> Orders are treated as paid without real money. Set DEMO_PAYMENTS to no before you go live.");
+  if (!s.demoPayments && !s.paystack) w.push("<b>Paystack key is missing.</b> Add PAYSTACK_SECRET_KEY in Cloudflare.");
+  if (s.supplier === "demo") w.push("<b>Supplier is in demo mode.</b> Bundles are NOT really sent. Set SUPPLIER=generic and your supplier API details.");
+  if (s.sms === "none") w.push("SMS is off. Set SMS_PROVIDER, SMS_API_KEY and SMS_SENDER to send receipts.");
+  $("sysWarn").innerHTML = w.map((x) => `<div class="alert warn" style="margin-bottom:10px">${x}</div>`).join("");
+  $("sysInfo").innerHTML = `<div class="row"><span>Supplier</span><b>${s.supplier}</b></div><div class="row"><span>Paystack key</span><b>${s.paystack ? "set" : "missing"}</b></div>
+    <div class="row"><span>Demo payments</span><b>${s.demoPayments ? "ON" : "off"}</b></div><div class="row"><span>SMS</span><b>${s.sms}</b></div>`;
+}
+
+// ---------- Orders ----------
+$("oGo").onclick = loadOrders;
+$("oStatus").onchange = loadOrders;
+$("oQ").onkeydown = (e) => { if (e.key === "Enter") loadOrders(); };
+async function loadOrders() {
+  $("oRows").innerHTML = `<tr><td colspan="9" class="center muted">Loading…</td></tr>`;
+  const r = await call("orders", { status: $("oStatus").value, q: $("oQ").value.trim() });
+  if (needLogin(r) || !r.ok) return;
+  $("oRows").innerHTML = r.orders.map((o) => `<tr>
+    <td>${OWM.when(o.createdAt)}</td>
+    <td><span title="${OWM.esc(o.supplierMessage || o.note || "")}">${o.ref}</span></td>
+    <td>${OWM.esc(o.network)} ${OWM.esc(o.bundleName)}</td>
+    <td>${o.phone}</td>
+    <td>${o.buyer === "agent" ? `Agent: ${OWM.esc(o.agentName)}` : "Customer"}</td>
+    <td class="num">${OWM.cedi(o.amount)}</td><td class="num">${OWM.cedi(o.cost)}</td>
+    <td>${OWM.badge(o.status)}${o.smsSent ? ' <span class="muted" title="SMS sent">✉</span>' : ""}</td>
+    <td><div class="row-actions">
+      ${["failed", "processing"].includes(o.status) ? `<button class="btn small" data-a="retry" data-r="${o.ref}">Try again</button>` : ""}
+      ${o.status !== "delivered" && o.status !== "pending" ? `<button class="btn small ghost" data-a="delivered" data-r="${o.ref}">Mark sent</button>` : ""}
+      ${["failed", "underpaid"].includes(o.status) ? `<button class="btn small ghost" data-a="refunded" data-r="${o.ref}">Mark refunded</button>` : ""}
+    </div></td></tr>`).join("") || `<tr><td colspan="9" class="center muted">No orders found.</td></tr>`;
+  $("oRows").querySelectorAll("button[data-a]").forEach((b) => b.onclick = async () => {
+    const a = b.dataset.a, ref = b.dataset.r;
+    if (a !== "retry" && !confirm(`Mark ${ref} as ${a}?`)) return;
+    OWM.busy(b, true);
+    const r = a === "retry" ? await call("order-retry", { ref }) : await call("order-mark", { ref, status: a });
+    OWM.toast(r.ok ? `Order is now: ${OWM.statusText[r.order.status]}` : r.error);
+    loadOrders();
+  });
+}
+
+// ---------- Bundles ----------
+async function loadBundles() {
+  const r = await call("bundles-get");
+  if (needLogin(r) || !r.ok) return;
+  bundles = r.bundles; drawBundles();
+}
+function drawBundles() {
+  const order = { MTN: 0, Telecel: 1, AT: 2 };
+  $("bRows").innerHTML = bundles.map((b, i) => `<tr data-i="${i}">
+    <td><input type="checkbox" data-k="active" ${b.active ? "checked" : ""} style="min-width:0;width:18px;height:18px"></td>
+    <td><select data-k="network">${["MTN", "Telecel", "AT"].map((n) => `<option ${n === b.network ? "selected" : ""}>${n}</option>`).join("")}</select></td>
+    <td><input data-k="name" value="${OWM.esc(b.name)}" style="width:80px"></td>
+    <td><input data-k="validity" value="${OWM.esc(b.validity || "")}" style="width:110px"></td>
+    <td><input data-k="price" type="number" step="0.01" value="${b.price}" style="width:85px"></td>
+    <td><input data-k="agentPrice" type="number" step="0.01" value="${b.agentPrice}" style="width:85px"></td>
+    <td><input data-k="cost" type="number" step="0.01" value="${b.cost}" style="width:85px"></td>
+    <td class="num profit"></td>
+    <td><input data-k="supplierCode" value="${OWM.esc(b.supplierCode || "")}" style="width:100px"></td>
+    <td><button class="btn small ghost" data-del="${i}" title="Remove">✕</button></td></tr>`).join("");
+  $("bRows").querySelectorAll("tr").forEach((tr) => {
+    const i = +tr.dataset.i;
+    tr.querySelectorAll("[data-k]").forEach((el) => el.oninput = el.onchange = () => {
+      const k = el.dataset.k;
+      bundles[i][k] = el.type === "checkbox" ? el.checked : ["price", "agentPrice", "cost"].includes(k) ? Number(el.value) : el.value;
+      profit(tr, bundles[i]);
+    });
+    profit(tr, bundles[i]);
+  });
+  $("bRows").querySelectorAll("[data-del]").forEach((b) => b.onclick = () => { bundles.splice(+b.dataset.del, 1); drawBundles(); });
+}
+function profit(tr, b) {
+  const c = `${OWM.cedi(b.price - b.cost)} / ${OWM.cedi(b.agentPrice - b.cost)}`;
+  const cell = tr.querySelector(".profit");
+  cell.textContent = c; cell.title = "Customer profit / agent profit (before Paystack fees)";
+  cell.style.color = b.agentPrice < b.cost || b.price < b.cost ? "var(--danger)" : "";
+}
+$("bAdd").onclick = () => { bundles.push({ network: "MTN", name: "", validity: "Non-expiry", price: 0, agentPrice: 0, cost: 0, supplierCode: "", active: true }); drawBundles(); };
+$("bSave").onclick = async () => {
+  OWM.busy($("bSave"), true, " Saving…");
+  const r = await call("bundles-save", { bundles });
+  OWM.busy($("bSave"), false);
+  if (r.ok) { bundles = r.bundles; drawBundles(); }
+  OWM.toast(r.ok ? "Prices saved. The shop now shows them." : r.error, 4500);
+};
+
+// ---------- Agents ----------
+async function loadAgents() {
+  const r = await call("agents");
+  if (needLogin(r) || !r.ok) return;
+  $("aRows").innerHTML = r.agents.map((a) => `<tr>
+    <td>${OWM.when(a.createdAt)}</td><td>${OWM.esc(a.name)}</td><td>${a.phone}</td><td>${OWM.esc(a.business || "")}</td><td>${OWM.esc(a.location || "")}</td>
+    <td>${OWM.badge(a.status)}</td>
+    <td><div class="row-actions">
+      ${a.status !== "approved" ? `<button class="btn small" data-s="approved" data-p="${a.phone}">Approve</button>` : ""}
+      ${a.status !== "blocked" ? `<button class="btn small ghost" data-s="blocked" data-p="${a.phone}">Block</button>` : ""}
+    </div></td></tr>`).join("") || `<tr><td colspan="7" class="center muted">No agents yet. Share your /agent.html link.</td></tr>`;
+  $("aRows").querySelectorAll("button[data-s]").forEach((b) => b.onclick = async () => {
+    OWM.busy(b, true);
+    const r = await call("agent-status", { phone: b.dataset.p, status: b.dataset.s });
+    OWM.toast(r.ok ? "Done" : r.error); loadAgents();
+  });
+}
+
+// ---------- Settings ----------
+async function loadSettings() {
+  const r = await call("config-get");
+  if (needLogin(r) || !r.ok) return;
+  const c = r.config;
+  $("cName").value = c.siteName; $("cTag").value = c.tagline; $("cWa").value = c.whatsapp; $("cNotice").value = c.notice;
+  $("cOpen").checked = c.shopOpen; $("cFee").value = c.paystackFeePercent; $("cSmsOk").value = c.smsDelivered; $("cSmsBad").value = c.smsFailed;
+  loadOverview();
+}
+$("cForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const r = await call("config-save", { config: { siteName: $("cName").value, tagline: $("cTag").value, whatsapp: $("cWa").value,
+    notice: $("cNotice").value, shopOpen: $("cOpen").checked, paystackFeePercent: $("cFee").value,
+    smsDelivered: $("cSmsOk").value, smsFailed: $("cSmsBad").value } });
+  OWM.toast(r.ok ? "Settings saved." : r.error);
+};
+$("smsTest").onclick = async () => {
+  OWM.busy($("smsTest"), true, " Sending…");
+  const r = await call("test-sms", { phone: $("smsTo").value });
+  OWM.busy($("smsTest"), false);
+  OWM.toast(r.ok ? r.message : r.error, 5000);
+};
+
+if (OWM.getToken("admin")) showApp(); else showLogin();
+</script>
+</body>
+</html>

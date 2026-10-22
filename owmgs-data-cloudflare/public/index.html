@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OWMGS Data — Buy MTN, Telecel & AT Data</title>
+<meta name="description" content="Buy cheap MTN, Telecel and AT data bundles in Ghana. Pay with MoMo or card. Fast delivery.">
+<meta name="theme-color" content="#0f1a2b">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/"><span class="logo-mark">OW</span><span id="siteName">OWMGS Data</span></a>
+    <nav class="nav">
+      <a href="/" class="on">Buy data</a>
+      <a href="/track.html">Track order</a>
+      <a href="/agent.html" id="agentLink">Agents</a>
+    </nav>
+  </div>
+</header>
+<div class="notice hide" id="notice"></div>
+
+<section class="hero">
+  <div class="wrap">
+    <span class="pill gold hide" id="agentPill">Agent prices on</span>
+    <span class="pill" id="payPill">MoMo &amp; card accepted</span>
+    <h1>Buy data in 3 easy steps</h1>
+    <p id="tagline">Cheap MTN, Telecel and AT data. Delivered in minutes.</p>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="grid2 lift">
+    <div class="card stack">
+      <div>
+        <h2><span class="step">1</span>Choose network</h2>
+        <div class="nets mt" id="nets"></div>
+      </div>
+      <div>
+        <h2><span class="step">2</span>Choose bundle</h2>
+        <div class="bundles mt" id="bundles"><div class="empty">Loading bundles…</div></div>
+      </div>
+    </div>
+
+    <div class="card sticky">
+      <h2><span class="step">3</span>Number &amp; pay</h2>
+      <p class="sub">Enter the number that should receive the data.</p>
+      <form id="buyForm" novalidate>
+        <div class="field">
+          <label for="phone">Phone number to receive data</label>
+          <input id="phone" type="tel" inputmode="numeric" placeholder="e.g. 0241234567" autocomplete="tel" required>
+          <div class="hint" id="phoneHint">10 digits, starting with 0</div>
+        </div>
+        <div class="field">
+          <label class="check"><input type="checkbox" id="otherSms"> Send the SMS receipt to a different number</label>
+        </div>
+        <div class="field hide" id="smsBox">
+          <label for="notifyPhone">SMS receipt number</label>
+          <input id="notifyPhone" type="tel" inputmode="numeric" placeholder="e.g. 0201234567">
+        </div>
+        <div class="field">
+          <label for="email">Email <span class="muted">(optional, for Paystack receipt)</span></label>
+          <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+        </div>
+        <div class="field hide" id="confirmBox">
+          <div class="alert warn" id="confirmMsg"></div>
+          <label class="check mt"><input type="checkbox" id="confirmNet"> I am sure. This number uses the network I chose.</label>
+        </div>
+        <div class="summary mt" id="summary">
+          <div class="row"><span>Bundle</span><b id="sumBundle">—</b></div>
+          <div class="row"><span>To</span><b id="sumPhone">—</b></div>
+          <div class="row total"><span>Total</span><span id="sumTotal">GH₵ 0.00</span></div>
+        </div>
+        <div class="alert bad mt hide" id="err"></div>
+        <button class="btn go mt" id="payBtn" type="submit" disabled>Choose a bundle</button>
+        <p class="hint center">You will pay securely on Paystack with MoMo or card.</p>
+      </form>
+    </div>
+  </div>
+
+  <div class="trust">
+    <div><b>Fast delivery</b>Your data is sent automatically after payment.</div>
+    <div><b>SMS receipt</b>We text you when your bundle has been sent.</div>
+    <div><b>Track any order</b>Use your reference or phone number on the Track page.</div>
+    <div><b>Become an agent</b>Resell data and get cheaper prices. <a href="/agent.html">Join now</a></div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div>&copy; <span id="yr"></span> <span class="siteNameFoot">OWMGS Data</span> · Owaacs Wood Media, Graphics &amp; Software</div>
+  <div>Designed, developed and powered by Sir Owas · 0249021637 | 0209067004</div>
+</footer>
+<a class="btn wa wa-float hide" id="waBtn" target="_blank" rel="noopener">WhatsApp us</a>
+
+<script src="/assets/common.js"></script>
+<script>
+const S = { bundles: [], net: "MTN", bundle: null, agent: null, open: true };
+const $ = (id) => document.getElementById(id);
+$("yr").textContent = new Date().getFullYear();
+
+async function load() {
+  const r = await OWM.api("/api/shop", { role: "agent" });
+  if (!r.ok) { $("bundles").innerHTML = `<div class="empty">${OWM.esc(r.error || "Could not load bundles.")}</div>`; return; }
+  S.bundles = r.bundles; S.agent = r.agent; S.open = r.site.open;
+  document.title = `${r.site.name} — Buy MTN, Telecel & AT Data`;
+  $("siteName").textContent = r.site.name;
+  document.querySelectorAll(".siteNameFoot").forEach((e) => (e.textContent = r.site.name));
+  $("tagline").textContent = r.site.tagline;
+  if (r.site.notice) { $("notice").textContent = r.site.notice; $("notice").classList.remove("hide"); }
+  if (!r.site.open) { $("notice").textContent = "The shop is closed right now. Please check back soon."; $("notice").classList.remove("hide"); }
+  if (r.site.whatsapp) { $("waBtn").href = "https://wa.me/" + r.site.whatsapp; $("waBtn").classList.remove("hide"); }
+  if (r.agent) { $("agentPill").textContent = `Agent prices on · ${r.agent.name}`; $("agentPill").classList.remove("hide"); $("agentLink").textContent = "My agent page"; }
+  const nets = ["MTN", "Telecel", "AT"].filter((n) => S.bundles.some((b) => b.network === n));
+  if (!nets.includes(S.net)) S.net = nets[0] || "MTN";
+  $("nets").innerHTML = ["MTN", "Telecel", "AT"].map((n) =>
+    `<button type="button" class="net" data-n="${n}" ${nets.includes(n) ? "" : "disabled"}><span class="dot">${n === "Telecel" ? "TC" : n}</span>${n}</button>`).join("");
+  $("nets").querySelectorAll(".net").forEach((b) => b.onclick = () => { S.net = b.dataset.n; S.bundle = null; render(); });
+  render();
+}
+
+function render() {
+  document.querySelectorAll(".net").forEach((b) => b.classList.toggle("on", b.dataset.n === S.net));
+  const list = S.bundles.filter((b) => b.network === S.net).sort((a, b) => a.price - b.price);
+  $("bundles").innerHTML = list.length ? list.map((b) => `
+    <button type="button" class="bundle ${S.bundle?.id === b.id ? "on" : ""}" data-id="${b.id}">
+      <div class="size">${OWM.esc(b.name)}</div>
+      <div class="val">${OWM.esc(b.validity || "")}</div>
+      <div class="price">${OWM.cedi(b.price)}${S.agent && b.normalPrice > b.price ? `<span class="was">${OWM.cedi(b.normalPrice)}</span>` : ""}</div>
+    </button>`).join("") : `<div class="empty">No ${S.net} bundles right now.</div>`;
+  $("bundles").querySelectorAll(".bundle").forEach((el) => el.onclick = () => { S.bundle = S.bundles.find((b) => b.id === el.dataset.id); render(); });
+  updateSummary();
+}
+
+function updateSummary() {
+  const p = OWM.cleanPhone($("phone").value);
+  const raw = $("phone").value.trim();
+  const hint = $("phoneHint");
+  hint.classList.remove("bad");
+  if (!raw) hint.textContent = "10 digits, starting with 0";
+  else if (!p) { hint.textContent = "This number does not look right yet."; hint.classList.add("bad"); }
+  else { const n = OWM.networkOf(p); hint.textContent = n ? `${n} number` : "Number OK"; }
+  $("sumBundle").textContent = S.bundle ? `${S.bundle.network} ${S.bundle.name}` : "—";
+  $("sumPhone").textContent = p || "—";
+  $("sumTotal").textContent = OWM.cedi(S.bundle?.price || 0);
+  const btn = $("payBtn");
+  if (S.sending) return;
+  btn.disabled = !S.bundle || !p || !S.open;
+  btn.textContent = !S.open ? "Shop closed" : !S.bundle ? "Choose a bundle" : !p ? "Enter phone number" : `Pay ${OWM.cedi(S.bundle.price)}`;
+}
+
+$("phone").addEventListener("input", () => { $("confirmBox").classList.add("hide"); $("confirmNet").checked = false; updateSummary(); });
+$("otherSms").onchange = (e) => $("smsBox").classList.toggle("hide", !e.target.checked);
+
+$("buyForm").onsubmit = async (e) => {
+  e.preventDefault();
+  $("err").classList.add("hide");
+  const btn = $("payBtn");
+  S.sending = true;
+  OWM.busy(btn, true, " Please wait…");
+  const r = await OWM.api("/api/order", { method: "POST", role: "agent", data: {
+    bundleId: S.bundle?.id, phone: $("phone").value, email: $("email").value,
+    notifyPhone: $("otherSms").checked ? $("notifyPhone").value : "",
+    confirmNetwork: $("confirmNet").checked,
+  }});
+  if (r.ok) { location.href = r.redirect; return; }
+  S.sending = false;
+  OWM.busy(btn, false);
+  if (r.needConfirm) { $("confirmMsg").textContent = r.error; $("confirmBox").classList.remove("hide"); }
+  else { $("err").textContent = r.error || "Something went wrong."; $("err").classList.remove("hide"); }
+  updateSummary();
+};
+
+load();
+</script>
+</body>
+</html>

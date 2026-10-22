@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Track Order — OWMGS Data</title>
+<meta name="theme-color" content="#0f1a2b">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/"><span class="logo-mark">OW</span>OWMGS Data</a>
+    <nav class="nav">
+      <a href="/">Buy data</a>
+      <a href="/track.html" class="on">Track order</a>
+      <a href="/agent.html">Agents</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="wrap">
+    <h1>Track your order</h1>
+    <p>Enter your order reference, or the phone number that should receive the data.</p>
+  </div>
+</section>
+
+<main class="wrap">
+  <div class="card lift narrow">
+    <form id="f">
+      <label for="q">Reference or phone number</label>
+      <input id="q" type="text" placeholder="e.g. OWM… or 0241234567" autocomplete="off">
+      <button class="btn go mt" id="go">Check order</button>
+    </form>
+  </div>
+  <div id="out" class="narrow mt"></div>
+</main>
+<footer class="foot">Need help? Contact us with your order reference.</footer>
+
+<script src="/assets/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let timer = null, tries = 0;
+
+const steps = ["pending", "paid", "processing", "delivered"];
+const stepNames = ["Order", "Paid", "Sending", "Sent"];
+function timeline(s) {
+  if (["failed", "underpaid", "refunded", "cancelled"].includes(s)) {
+    const at = s === "failed" ? 2 : 1;
+    return `<div class="timeline">${stepNames.map((n, i) => `<div class="t ${i < at ? "done" : i === at ? "bad" : ""}">${i === at ? OWM.statusText[s] : n}</div>`).join("")}</div>`;
+  }
+  const at = steps.indexOf(s);
+  return `<div class="timeline">${stepNames.map((n, i) => `<div class="t ${i <= at && (i > 0 || s !== "pending") ? "done" : ""}">${n}</div>`).join("")}</div>`;
+}
+const help = {
+  pending: "We have not received your payment yet. If you paid, wait a minute — this page refreshes by itself.",
+  paid: "Payment received. Your bundle is being sent now.",
+  processing: "Your bundle is being sent to the network.",
+  delivered: "Your data has been sent. You should get a network SMS shortly. Check your balance if you don't.",
+  failed: "We could not send this bundle yet. Our team has been told and will fix it or refund you.",
+  underpaid: "The amount paid was less than the price. Please contact us with your reference.",
+  refunded: "This order was refunded.",
+  cancelled: "This order was cancelled.",
+};
+
+function show(list) {
+  $("out").innerHTML = list.map((o) => `
+    <div class="card mt">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+        <div><div class="muted" style="font-size:13px">Ref ${OWM.esc(o.ref)}</div>
+        <h2>${OWM.esc(o.network)} ${OWM.esc(o.bundle)} → ${OWM.esc(o.phone)}</h2></div>
+        ${OWM.badge(o.status)}
+      </div>
+      ${timeline(o.status)}
+      <p class="sub" style="margin:10px 0 0">${help[o.status] || ""}</p>
+      <div class="summary mt">
+        <div class="row"><span>Amount</span><b>${OWM.cedi(o.amount)}</b></div>
+        <div class="row"><span>Ordered</span><b>${OWM.when(o.createdAt)}</b></div>
+        ${o.deliveredAt ? `<div class="row"><span>Sent</span><b>${OWM.when(o.deliveredAt)}</b></div>` : ""}
+      </div>
+    </div>`).join("") || `<div class="card mt center muted">No orders found for that number.</div>`;
+}
+
+async function check(q, quiet) {
+  clearTimeout(timer);
+  q = q.trim();
+  if (!q) return;
+  const isRef = /^owm/i.test(q);
+  const btn = $("go");
+  if (!quiet) OWM.busy(btn, true, " Checking…");
+  const r = await OWM.api("/api/track?" + (isRef ? "ref=" : "phone=") + encodeURIComponent(q));
+  if (!quiet) OWM.busy(btn, false);
+  if (!r.ok) { $("out").innerHTML = `<div class="alert bad mt">${OWM.esc(r.error)}</div>`; return; }
+  show(r.orders);
+  const moving = r.orders.some((o) => ["pending", "paid", "processing"].includes(o.status));
+  if (moving && tries++ < 24) timer = setTimeout(() => check(q, true), 5000);
+}
+
+$("f").onsubmit = (e) => { e.preventDefault(); tries = 0; check($("q").value); };
+const ref = new URLSearchParams(location.search).get("ref") || new URLSearchParams(location.search).get("reference");
+if (ref) { $("q").value = ref; check(ref); }
+</script>
+</body>
+</html>

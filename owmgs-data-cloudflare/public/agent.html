@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agents — OWMGS Data</title>
+<meta name="theme-color" content="#0f1a2b">
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/"><span class="logo-mark">OW</span>OWMGS Data</a>
+    <nav class="nav">
+      <a href="/">Buy data</a>
+      <a href="/track.html">Track order</a>
+      <a href="/agent.html" class="on">Agents</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Logged out -->
+<section id="outView">
+  <div class="hero"><div class="wrap">
+    <span class="pill gold">For resellers</span>
+    <h1>Sell data, earn daily</h1>
+    <p>Agents buy at cheaper prices and resell to their customers. Create an account, wait for approval, then log in.</p>
+  </div></div>
+  <main class="wrap">
+    <div class="card lift narrow">
+      <div class="tabs"><button class="tab on" data-t="login">Log in</button><button class="tab" data-t="register">Create account</button></div>
+      <form id="loginForm">
+        <div class="field"><label>Phone number</label><input id="lPhone" type="tel" inputmode="numeric" autocomplete="username"></div>
+        <div class="field"><label>Password</label><input id="lPass" type="password" autocomplete="current-password"></div>
+        <div class="alert bad mt hide" id="lErr"></div>
+        <button class="btn go mt" id="lBtn">Log in</button>
+      </form>
+      <form id="regForm" class="hide">
+        <div class="field"><label>Full name</label><input id="rName" type="text" autocomplete="name"></div>
+        <div class="field"><label>Phone number</label><input id="rPhone" type="tel" inputmode="numeric" autocomplete="tel"></div>
+        <div class="field"><label>Business name <span class="muted">(optional)</span></label><input id="rBiz" type="text"></div>
+        <div class="field"><label>Town / location <span class="muted">(optional)</span></label><input id="rLoc" type="text"></div>
+        <div class="field"><label>Password</label><input id="rPass" type="password" autocomplete="new-password"><div class="hint">At least 6 characters</div></div>
+        <div class="alert mt hide" id="rMsg"></div>
+        <button class="btn go mt" id="rBtn">Create account</button>
+      </form>
+    </div>
+  </main>
+</section>
+
+<!-- Logged in -->
+<section id="inView" class="hide">
+  <div class="hero"><div class="wrap">
+    <span class="pill gold">Agent account</span>
+    <h1 id="hello">Welcome</h1>
+    <p>Buy at your agent prices. Every order you make shows below.</p>
+  </div></div>
+  <main class="wrap">
+    <div class="lift">
+      <div class="stats">
+        <div class="stat"><div class="k">Orders</div><div class="v" id="sOrders">0</div></div>
+        <div class="stat"><div class="k">Sent</div><div class="v" id="sDone">0</div></div>
+        <div class="stat"><div class="k">Spent (sent orders)</div><div class="v" id="sSpent">0</div></div>
+      </div>
+      <a class="btn go mt" href="/">Buy data at agent price</a>
+    </div>
+    <div class="card mt">
+      <h2>My orders</h2>
+      <p class="sub">Latest 100 orders.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Date</th><th>Ref</th><th>Bundle</th><th>Number</th><th class="num">Amount</th><th>Status</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+    </div>
+    <div class="card mt narrow" style="margin-left:0">
+      <h2>Change password</h2>
+      <form id="pwForm" class="mt">
+        <div class="field"><label>Old password</label><input id="pOld" type="password" autocomplete="current-password"></div>
+        <div class="field"><label>New password</label><input id="pNew" type="password" autocomplete="new-password"></div>
+        <button class="btn mt" id="pBtn">Change password</button>
+      </form>
+    </div>
+    <button class="btn ghost mt" id="logout">Log out</button>
+  </main>
+</section>
+<footer class="foot">Designed, developed and powered by Sir Owas · 0249021637 | 0209067004</footer>
+
+<script src="/assets/common.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+document.querySelectorAll(".tab").forEach((t) => t.onclick = () => {
+  document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
+  $("loginForm").classList.toggle("hide", t.dataset.t !== "login");
+  $("regForm").classList.toggle("hide", t.dataset.t !== "register");
+});
+
+$("loginForm").onsubmit = async (e) => {
+  e.preventDefault(); $("lErr").classList.add("hide");
+  OWM.busy($("lBtn"), true, " Logging in…");
+  const r = await OWM.api("/api/auth", { method: "POST", data: { action: "login", phone: $("lPhone").value, password: $("lPass").value } });
+  OWM.busy($("lBtn"), false);
+  if (!r.ok) { $("lErr").textContent = r.error; $("lErr").classList.remove("hide"); return; }
+  OWM.setToken("agent", r.token); load();
+};
+
+$("regForm").onsubmit = async (e) => {
+  e.preventDefault();
+  OWM.busy($("rBtn"), true, " Creating…");
+  const r = await OWM.api("/api/auth", { method: "POST", data: { action: "register", name: $("rName").value, phone: $("rPhone").value,
+    business: $("rBiz").value, location: $("rLoc").value, password: $("rPass").value } });
+  OWM.busy($("rBtn"), false);
+  const m = $("rMsg");
+  m.className = "alert mt " + (r.ok ? "good" : "bad");
+  m.textContent = r.ok ? r.message : r.error;
+  if (r.ok) $("regForm").reset();
+};
+
+$("pwForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const r = await OWM.api("/api/auth", { method: "POST", role: "agent", data: { action: "password", old: $("pOld").value, password: $("pNew").value } });
+  OWM.toast(r.ok ? r.message : r.error);
+  if (r.ok) $("pwForm").reset();
+};
+
+$("logout").onclick = () => { OWM.setToken("agent", ""); location.reload(); };
+
+async function load() {
+  if (!OWM.getToken("agent")) return;
+  const r = await OWM.api("/api/agent", { role: "agent" });
+  if (!r.ok) { OWM.setToken("agent", ""); return; }
+  $("outView").classList.add("hide"); $("inView").classList.remove("hide");
+  $("hello").textContent = "Welcome, " + r.agent.name.split(" ")[0];
+  $("sOrders").textContent = r.stats.orders;
+  $("sDone").textContent = r.stats.delivered;
+  $("sSpent").textContent = OWM.cedi(r.stats.spent);
+  $("rows").innerHTML = r.orders.map((o) => `<tr>
+    <td>${OWM.when(o.createdAt)}</td><td><a href="/track.html?ref=${o.ref}">${o.ref}</a></td>
+    <td>${OWM.esc(o.network)} ${OWM.esc(o.bundle)}</td><td>${o.phone}</td>
+    <td class="num">${OWM.cedi(o.amount)}</td><td>${OWM.badge(o.status)}</td></tr>`).join("")
+    || `<tr><td colspan="6" class="center muted">No orders yet.</td></tr>`;
+}
+load();
+</script>
+</body>
+</html>
